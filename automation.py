@@ -6,6 +6,8 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 import os
 import re
+import pandas as pd
+
 
 def def_inicia_automacao():
     chrome_options = Options()
@@ -59,7 +61,6 @@ def def_busca_perfil(driver):
         try:
             wait = WebDriverWait(driver, 15)
             
-            # Procura texto que contenha "seguidores" ou "followers"
             elemento = wait.until(
                 EC.presence_of_element_located(
                     (By.XPATH, "//*[contains(text(),'seguidores') or contains(text(),'followers')]")
@@ -67,14 +68,12 @@ def def_busca_perfil(driver):
             )
             
             texto_completo = elemento.text
-            print(f"Texto encontrado: {texto_completo}")
-            
             seguidores = converter_seguidores(texto_completo)
             
-            print(f"Seguidores convertidos: {seguidores}")
+            print(f"Seguidores: {seguidores}")
         
-        except Exception as e:
-            seguidores = "Erro ou não encontrado"
+        except Exception:
+            seguidores = "Erro"
             print("Não foi possível capturar seguidores.")
         
         resultados.append(f"{perfil} - {seguidores}")
@@ -87,6 +86,53 @@ def def_busca_perfil(driver):
     print("Arquivo resultado_seguidores.txt criado com sucesso.")
 
 
+def def_gera_excel():
+    
+    if not os.path.exists("resultado_seguidores.txt"):
+        print("Arquivo resultado_seguidores.txt não encontrado.")
+        return
+    
+    perfis = []
+    seguidores_lista = []
+    
+    with open("resultado_seguidores.txt", "r", encoding="utf-8") as file:
+        linhas = file.readlines()
+    
+    for linha in linhas:
+        linha = linha.strip()
+        if not linha:
+            continue
+        
+        try:
+            url, seguidores = linha.split(" - ")
+            
+            # Extrai nome do perfil
+            nome_perfil = url.rstrip("/").split("/")[-1]
+            
+            # Verifica se seguidores é número
+            if seguidores.isdigit():
+                seguidores_valor = int(seguidores)
+            else:
+                seguidores_valor = None  # deixa vazio no Excel
+            
+            perfis.append(nome_perfil)
+            seguidores_lista.append(seguidores_valor)
+        
+        except Exception:
+            print(f"Linha ignorada: {linha}")
+            continue
+    
+    df = pd.DataFrame({
+        "Perfis": perfis,
+        "Seguidores": seguidores_lista
+    })
+    
+    df.to_excel("planilha_seguidores.xlsx", index=False)
+    
+    print("Arquivo planilha_seguidores.xlsx criado com sucesso.")
+
+
 # 🔥 EXECUÇÃO AUTOMÁTICA PARA TESTE NO JUPYTER
 navegador = def_inicia_automacao()
 def_busca_perfil(navegador)
+def_gera_excel()
